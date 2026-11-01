@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wo bin ich? – Digitales Raum-Leitsystem</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between text-slate-800">
+
+    <!-- Header Navigation -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Titel -->
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-indigo-600 rounded-lg">
+                        <i class="fa-solid me-0 fa-location-dot text-xl text-amber-300"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">Wo bin ich?</h1>
+                        <p class="text-xs text-indigo-200 hidden sm:block">Gymnasium Mainz-Mombach</p>
+                    </div>
+                </div>
+
+                <!-- Modus-Umschalter (Navigation) -->
+                <nav class="flex space-x-1 sm:space-x-2 bg-indigo-800/60 p-1 rounded-xl">
+                    <button id="nav-schueler" onclick="switchTab('schueler')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition duration-150 ease-in-out bg-white text-indigo-900 shadow">
+                        <i class="fa-solid fa-user-graduate sm:mr-1"></i>
+                        <span class="hidden sm:inline">Schüler</span>
+                    </button>
+                    <button id="nav-lehrer" onclick="switchTab('lehrer')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition duration-150 ease-in-out text-indigo-100 hover:text-white hover:bg-indigo-700/50">
+                        <i class="fa-solid fa-chalkboard-user sm:mr-1"></i>
+                        <span class="hidden sm:inline">Lehrer Admin</span>
+                    </button>
+                    <button id="nav-scanner" onclick="switchTab('scanner')" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition duration-150 ease-in-out text-indigo-100 hover:text-white hover:bg-indigo-700/50">
+                        <i class="fa-solid fa-qrcode sm:mr-1"></i>
+                        <span class="hidden sm:inline">QR-Simulator</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- STATUS MESSAGES / NOTIFICATIONS -->
+        <div id="toast-container" class="fixed top-20 right-4 z-50 space-y-2 max-w-sm w-full pointer-events-none"></div>
+
+        <!-- ========================================== -->
+        <!-- 1. SCHÜLER-ANSICHT                         -->
+        <!-- ========================================== -->
+        <section id="view-schueler" class="space-y-6">
+            
+            <!-- Login State / Info Banner -->
+            <div id="login-banner" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xl" id="user-avatar">
+                            ?
+                        </div>
+                        <div>
+                            <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Angemeldet als</span>
+                            <h2 class="text-xl font-bold text-slate-900" id="user-display-name">Nicht eingeloggt</h2>
+                            <p class="text-xs text-slate-500" id="user-class-display">Bitte wählen Sie einen Schüler aus</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Switch Login Dropdown -->
+                    <div class="w-full sm:w-auto">
+                        <label for="student-select" class="block text-xs font-medium text-slate-500 mb-1">Demo-Schüler wechseln:</label>
+                        <select id="student-select" onchange="loginAsStudent(this.value)" class="w-full sm:w-48 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Location Card -->
+            <div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                
+                <div class="relative z-10 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="px-3 py-1 bg-indigo-500/30 backdrop-blur-md rounded-full text-xs font-semibold text-indigo-200 border border-indigo-400/30">
+                            Aktueller Aufenthaltsort
+                        </span>
+                        <span id="checkin-time-display" class="text-xs text-slate-300">
+                            <i class="fa-regular fa-clock mr-1"></i> -
+                        </span>
+                    </div>
+
+                    <div class="py-2">
+                        <h3 id="current-room-display" class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+                            Nicht eingecheckt
+                        </h3>
+                        <p id="current-room-desc" class="text-indigo-200 text-sm mt-1">
+                            Bitte scanne einen QR-Code an der Zimmertür oder wähle unten einen Raum.
+                        </p>
+                    </div>
+
+                    <div class="pt-2 flex flex-wrap gap-3">
+                        <button onclick="switchTab('scanner')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition shadow-lg shadow-indigo-600/30 flex items-center space-x-2">
+                            <i class="fa-solid fa-qrcode"></i>
+                            <span>QR-Code scannen (Simulieren)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schnell-Auswahl / Manuelle Raumwahl -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 space-y-4">
+                <h3 class="font-bold text-slate-800 text-base flex items-center">
+                    <i class="fa-solid fa-location-arrow text-indigo-600 mr-2"></i>
+                    Manuelle Raumauswahl (Prototyp)
+                </h3>
+                <p class="text-xs text-slate-500">Klicke auf einen Raum, um deinen Standort direkt zu aktualisieren:</p>
+
+                <div id="quick-room-buttons" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 2. LEHRER-DASHBOARD (ADMIN)                -->
+        <!-- ========================================== -->
+        <section id="view-lehrer" class="hidden space-y-6">
+            
+            <!-- Dashboard Header & Stats -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Lehrer-Dashboard</h2>
+                    <p class="text-sm text-slate-500">Echtzeit-Übersicht aller Schülerstandorte im Schulgebäude.</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="resetAllLocations()" class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-sm font-medium transition flex items-center space-x-2">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>Tagesabschluss (Alle zurücksetzen)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                        <i class="fa-solid fa-users text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase">Schüler Gesamt</p>
+                        <p id="stat-total-students" class="text-2xl font-bold text-slate-800">0</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <i class="fa-solid fa-circle-check text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase">Eingecheckt</p>
+                        <p id="stat-checkedin-students" class="text-2xl font-bold text-slate-800">0</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                    <div class="p-3 bg-purple-50 text-purple-600 rounded-xl">
+                        <i class="fa-solid fa-door-open text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase">Aktive Räume</p>
+                        <p id="stat-active-rooms" class="text-2xl font-bold text-slate-800">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter & Search Toolbar -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 justify-between">
+                <!-- Search Box -->
+                <div class="relative flex-grow max-w-md">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400"></i>
+                    <input type="text" id="search-input" oninput="renderTeacherTable()" placeholder="Schüler oder Klasse suchen..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <!-- Room Filter -->
+                <div class="flex items-center space-x-2">
+                    <label for="room-filter" class="text-xs font-medium text-slate-500 whitespace-nowrap">Filter Raum:</label>
+                    <select id="room-filter" onchange="renderTeacherTable()" class="bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                        <option value="ALL">Alle Räume</option>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Live Student Location Table -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-50 text-xs text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-100">
+                            <tr>
+                                <th class="px-6 py-4">Schüler</th>
+                                <th class="px-6 py-4">Klasse</th>
+                                <th class="px-6 py-4">Aktueller Raum</th>
+                                <th class="px-6 py-4">Letzter Check-in</th>
+                                <th class="px-6 py-4 text-right">Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody id="student-table-body" class="divide-y divide-slate-100">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- 3. QR-CODE SIMULATOR                       -->
+        <!-- ========================================== -->
+        <section id="view-scanner" class="hidden max-w-xl mx-auto space-y-6">
+            <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100 text-center space-y-6">
+                
+                <div class="inline-flex p-4 bg-indigo-50 text-indigo-600 rounded-2xl text-3xl mb-2">
+                    <i class="fa-solid fa-qrcode"></i>
+                </div>
+
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">QR-Code Scanner Simulator</h2>
+                    <p class="text-sm text-slate-500 mt-1">
+                        In der echten Anwendung scannt der Schüler den QR-Code an der Tür mit der Handy-Kamera. Hier kannst du das Scannen simulieren.
+                    </p>
+                </div>
+
+                <!-- Simulated Camera Viewfinder -->
+                <div class="relative bg-slate-900 rounded-2xl p-8 text-white flex flex-col items-center justify-center space-y-4 border-4 border-dashed border-indigo-500/40">
+                    <div class="w-32 h-32 border-2 border-indigo-400 rounded-xl relative flex items-center justify-center bg-indigo-950/40">
+                        <i class="fa-solid fa-expand text-4xl text-indigo-400 opacity-60 animate-pulse"></i>
+                    </div>
+                    <p class="text-xs text-slate-400">Richte die Kamera auf den Raum-QR-Code</p>
+                </div>
+
+                <!-- Select Simulated QR Code -->
+                <div class="space-y-3 text-left">
+                    <label for="simulate-room-select" class="block text-sm font-medium text-slate-700">
+                        Wähle einen Raum zum "Scannen":
+                    </label>
+                    <select id="simulate-room-select" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 p-3">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <button onclick="triggerSimulatedScan()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-600/20 transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>QR-Code jetzt "Scannen"</span>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto px-4">
+            Prototyp entwickelt für das Gymnasium Mainz-Mombach &bull; Lokaler Schulserver
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT APPLICATION LOGIC -->
+    <script>
+        // --- DATA INITIALIZATION ---
+        const INITIAL_STUDENTS = [
+            { id: 1, name: "Max Mustermann", class: "9b", currentRoom: "R101", lastCheckin: "08:15" },
+            { id: 2, name: "Anna Schmidt", class: "9b", currentRoom: "R102", lastCheckin: "08:20" },
+            { id: 3, name: "Jonas Weber", class: "10a", currentRoom: "Mensa", lastCheckin: "09:30" },
+            { id: 4, name: "Sofia Rossi", class: "10a", currentRoom: "Turnhalle", lastCheckin: "09:45" },
+            { id: 5, name: "Leon Becker", class: "8c", currentRoom: "R101", lastCheckin: "08:05" },
+            { id: 6, name: "Mia Fischer", class: "8c", currentRoom: "Bibliothek", lastCheckin: "10:10" }
+        ];
+
+        const ROOMS = [
+            { id: "R101", name: "Raum 101 (Mathe)", type: "Klassenzimmer" },
+            { id: "R102", name: "Raum 102 (Deutsch)", type: "Klassenzimmer" },
+            { id: "R201", name: "Raum 201 (Informatik)", type: "Fachraum" },
+            { id: "Bio-Lab", name: "Biologie-Saal", type: "Fachraum" },
+            { id: "Mensa", name: "Mensa / Aufenthaltsraum", type: "Allgemein" },
+            { id: "Bibliothek", name: "Schulbibliothek", type: "Allgemein" },
+            { id: "Turnhalle", name: "Sporthalle 1", type: "Sport" },
+            { id: "Sekretariat", name: "Sekretariat", type: "Verwaltung" }
+        ];
+
+        // App State
+        let students = [];
+        let currentUserId = 1;
+
+        // Initialize state on page load
+        window.onload = function() {
+            loadState();
+            populateStudentDropdown();
+            populateRoomDropdowns();
+            renderStudentView();
+            renderTeacherTable();
+        };
+
+        // --- STATE MANAGEMENT ---
+        function loadState() {
+            const saved = localStorage.getItem('wo_bin_ich_students');
+            if (saved) {
+                try {
+                    students = JSON.parse(saved);
+                } catch(e) {
+                    students = [...INITIAL_STUDENTS];
+                }
+            } else {
+                students = [...INITIAL_STUDENTS];
+                saveState();
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('wo_bin_ich_students', JSON.stringify(students));
+        }
+
+        // --- TAB NAVIGATION ---
+        function switchTab(tab) {
+            document.getElementById('view-schueler').classList.add('hidden');
+            document.getElementById('view-lehrer').classList.add('hidden');
+            document.getElementById('view-scanner').classList.add('hidden');
+
+            document.getElementById('nav-schueler').className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition text-indigo-100 hover:text-white hover:bg-indigo-700/50";
+            document.getElementById('nav-lehrer').className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition text-indigo-100 hover:text-white hover:bg-indigo-700/50";
+            document.getElementById('nav-scanner').className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition text-indigo-100 hover:text-white hover:bg-indigo-700/50";
+
+            if(tab === 'schueler') {
+                document.getElementById('view-schueler').classList.remove('hidden');
+                document.getElementById('nav-schueler').className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-white text-indigo-900 shadow";
+            } else if(tab === 'lehrer') {
+                document.getElementById('view-lehrer').classList.remove('hidden');
+                document.getElementById('nav-lehrer').className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-white text-indigo-900 shadow";
+                renderTeacherTable();
+            } else if(tab === 'scanner') {
+                document.getElementById('view-scanner').classList.remove('hidden');
+                document.getElementById('nav-scanner').className = "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-white text-indigo-900 shadow";
+            }
+        }
+
+        // --- SCHÜLER ACTIONS ---
+        function loginAsStudent(id) {
+            currentUserId = parseInt(id);
+            renderStudentView();
+            showToast(`Angemeldet als ${getCurrentStudent().name}`, 'info');
+        }
+
+        function getCurrentStudent() {
+            return students.find(s => s.id === currentUserId) || students[0];
+        }
+
+        function checkInStudent(roomId) {
+            const student = getCurrentStudent();
+            const roomObj = ROOMS.find(r => r.id === roomId);
+            const roomName = roomObj ? roomObj.id : roomId;
+
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            student.currentRoom = roomName;
+            student.lastCheckin = timeString;
+
+            saveState();
+            renderStudentView();
+            showToast(`Erfolgreich in ${roomName} eingecheckt!`, 'success');
+        }
+
+        function renderStudentView() {
+            const student = getCurrentStudent();
+            
+            // Header Info
+            document.getElementById('user-display-name').innerText = student.name;
+            document.getElementById('user-class-display').innerText = `Klasse ${student.class}`;
+            document.getElementById('user-avatar').innerText = student.name.charAt(0);
+
+            // Room Card
+            document.getElementById('current-room-display').innerText = student.currentRoom || "Nicht im Raum";
+            document.getElementById('checkin-time-display').innerHTML = `<i class="fa-regular fa-clock mr-1"></i> ${student.lastCheckin || 'Heute noch kein Check-in'}`;
+        }
+
+        // --- POPULATE DROPDOWNS & BUTTONS ---
+        function populateStudentDropdown() {
+            const select = document.getElementById('student-select');
+            select.innerHTML = '';
+            students.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.innerText = `${s.name} (${s.class})`;
+                select.appendChild(opt);
+            });
+            select.value = currentUserId;
+        }
+
+        function populateRoomDropdowns() {
+            // Scanner Select
+            const simSelect = document.getElementById('simulate-room-select');
+            simSelect.innerHTML = '';
+
+            // Filter Select
+            const filterSelect = document.getElementById('room-filter');
+            filterSelect.innerHTML = '<option value="ALL">Alle Räume</option>';
+
+            // Quick Buttons Container
+            const quickContainer = document.getElementById('quick-room-buttons');
+            quickContainer.innerHTML = '';
+
+            ROOMS.forEach(r => {
+                // Sim option
+                const opt1 = document.createElement('option');
+                opt1.value = r.id;
+                opt1.innerText = `${r.name}`;
+                simSelect.appendChild(opt1);
+
+                // Filter option
+                const opt2 = document.createElement('option');
+                opt2.value = r.id;
+                opt2.innerText = `${r.id} - ${r.name}`;
+                filterSelect.appendChild(opt2);
+
+                // Quick Button
+                const btn = document.createElement('button');
+                btn.onclick = () => checkInStudent(r.id);
+                btn.className = "p-3 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 border border-slate-200 rounded-xl text-left transition text-slate-700 flex flex-col justify-between space-y-1";
+                btn.innerHTML = `
+                    <span class="font-bold text-sm text-indigo-950">${r.id}</span>
+                    <span class="text-xs text-slate-500 truncate">${r.name}</span>
+                `;
+                quickContainer.appendChild(btn);
+            });
+        }
+
+        // --- SIMULATOR ACTIONS ---
+        function triggerSimulatedScan() {
+            const selectedRoom = document.getElementById('simulate-room-select').value;
+            checkInStudent(selectedRoom);
+            setTimeout(() => {
+                switchTab('schueler');
+            }, 600);
+        }
+
+        // --- LEHRER DASHBOARD ACTIONS ---
+        function renderTeacherTable() {
+            const tbody = document.getElementById('student-table-body');
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+            const roomFilterVal = document.getElementById('room-filter').value;
+
+            tbody.innerHTML = '';
+
+            let checkedInCount = 0;
+            let activeRoomsSet = new Set();
+
+            const filteredStudents = students.filter(s => {
+                const matchesSearch = s.name.toLowerCase().includes(searchVal) || s.class.toLowerCase().includes(searchVal);
+                const matchesRoom = roomFilterVal === 'ALL' || s.currentRoom === roomFilterVal;
+                return matchesSearch && matchesRoom;
+            });
+
+            students.forEach(s => {
+                if(s.currentRoom && s.currentRoom !== 'Abgemeldet') {
+                    checkedInCount++;
+                    activeRoomsSet.add(s.currentRoom);
+                }
+            });
+
+            // Update Stats
+            document.getElementById('stat-total-students').innerText = students.length;
+            document.getElementById('stat-checkedin-students').innerText = checkedInCount;
+            document.getElementById('stat-active-rooms').innerText = activeRoomsSet.size;
+
+            if (filteredStudents.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-slate-400">
+                            Keine Schüler entsprechend der Suchkriterien gefunden.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filteredStudents.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition";
+                
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-semibold text-slate-900">${s.name}</td>
+                    <td class="px-6 py-4"><span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium">${s.class}</span></td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${s.currentRoom ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}">
+                            <span class="w-1.5 h-1.5 mr-1.5 rounded-full ${s.currentRoom ? 'bg-emerald-500' : 'bg-slate-400'}"></span>
+                            ${s.currentRoom || 'Abgemeldet'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-xs text-slate-400">${s.lastCheckin || '-'}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="manualResetStudent(${s.id})" class="text-xs text-slate-400 hover:text-amber-600 p-1" title="Zurücksetzen">
+                            <i class="fa-solid fa-arrow-rotate-left"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function manualResetStudent(id) {
+            const student = students.find(s => s.id === id);
+            if(student) {
+                student.currentRoom = "Abgemeldet";
+                student.lastCheckin = "-";
+                saveState();
+                renderTeacherTable();
+                renderStudentView();
+                showToast(`${student.name} zurückgesetzt`, 'info');
+            }
+        }
+
+        function resetAllLocations() {
+            if(confirm("Möchtest du wirklich alle Schülerstandorte für den Tagesabschluss zurücksetzen?")) {
+                students.forEach(s => {
+                    s.currentRoom = "Abgemeldet";
+                    s.lastCheckin = "-";
+                });
+                saveState();
+                renderTeacherTable();
+                renderStudentView();
+                showToast("Alle Standorte wurden zurückgesetzt", 'info');
+            }
+        }
+
+        // --- TOAST NOTIFICATIONS ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bg = 'bg-slate-900 text-white';
+            if(type === 'success') bg = 'bg-emerald-600 text-white';
+            if(type === 'info') bg = 'bg-indigo-600 text-white';
+
+            toast.className = `${bg} px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center justify-between transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" class="ml-3 opacity-70 hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
